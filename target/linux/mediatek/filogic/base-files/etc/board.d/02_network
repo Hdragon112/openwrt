@@ -57,6 +57,7 @@ mediatek_setup_interfaces()
 	jcg,q30-pro|\
 	keenetic,kn-3711|\
 	keenetic,kn-3811|\
+	livinet,li320|\
 	netis,nx32u|\
 	qihoo,360t7|\
 	qihoo,360t7-ubi|\
@@ -262,6 +263,11 @@ mediatek_setup_macs()
 		wan_mac=$(mtd_get_mac_ascii pdt_data_1 ethaddr)
 		lan_mac=$(macaddr_add "$wan_mac" 1)
 		label_mac=$wan_mac
+		;;
+	jiorouter,ax6000-jidu6101)
+		label_mac=$(mtd_get_mac_ascii u-boot-env mac)
+		wan_mac=$label_mac
+		lan_mac=$(macaddr_add "$label_mac" 1)
 		;;
 	mercusys,mr80x-v3|\
 	mercusys,mr85x)
