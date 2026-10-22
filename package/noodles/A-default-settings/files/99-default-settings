@@ -30,9 +30,6 @@ if ! uci -q get system.@imm_init[0].system_chn > "/dev/null"; then
 	EOF
 fi
 
-sed -i '/BUILD_ID/d' /etc/os-release
-echo "BUILD_ID='R261024" >> /etc/os-release
-
 sed -i "/log-facility/d" "/etc/dnsmasq.conf"
 echo "log-facility=/dev/null" >> "/etc/dnsmasq.conf"
 
