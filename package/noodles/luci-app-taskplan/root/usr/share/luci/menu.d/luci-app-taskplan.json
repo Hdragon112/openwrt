@@ -6,7 +6,7 @@
 			"type": "firstchild"
 		}
 	},
-	"admin/system/taskplan": {
+	"admin/control/taskplan": {
 		"title": "Task Plan",
 		"order": 60,
 		"action": {
@@ -17,7 +17,7 @@
 			"uci": { "taskplan": true }
 		}
 	},
-	"admin/system/taskplan/scheduled": {
+	"admin/control/taskplan/scheduled": {
 		"title": "Scheduled Tasks",
 		"order": 10,
 		"action": {
@@ -25,7 +25,7 @@
 			"path": "taskplan/scheduled"
 		}
 	},
-	"admin/system/taskplan/startup": {
+	"admin/control/taskplan/startup": {
 		"title": "Startup Tasks",
 		"order": 20,
 		"action": {
@@ -33,7 +33,7 @@
 			"path": "taskplan/startup"
 		}
 	},
-	"admin/system/taskplan/log": {
+	"admin/control/taskplan/log": {
 		"title": "Log Viewer",
 		"order": 30,
 		"action": {
