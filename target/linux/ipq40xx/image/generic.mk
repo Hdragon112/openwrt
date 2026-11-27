@@ -171,6 +171,7 @@ define Device/aruba_ap-303
 	$(call Device/aruba_glenmorangie)
 	DEVICE_MODEL := AP-303
 	DEVICE_DTS_CONFIG := Glenmorangie@1
+	DEVICE_PACKAGES := ipq-wifi-aruba_ap-303
 endef
 TARGET_DEVICES += aruba_ap-303
 
@@ -178,13 +179,14 @@ define Device/aruba_ap-303h
 	$(call Device/aruba_glenmorangie)
 	DEVICE_MODEL := AP-303H
 	DEVICE_DTS_CONFIG := Aberlour@1
+	DEVICE_PACKAGES := ipq-wifi-aruba_ap-303h
 endef
 TARGET_DEVICES += aruba_ap-303h
 
 define Device/aruba_ap-365
 	$(call Device/aruba_glenmorangie)
 	DEVICE_MODEL := AP-365
-	DEVICE_PACKAGES := kmod-hwmon-ad7418
+	DEVICE_PACKAGES := kmod-hwmon-ad7418 ipq-wifi-aruba_ap-365
 	DEVICE_DTS_CONFIG := Bunker@1
 endef
 TARGET_DEVICES += aruba_ap-365
@@ -915,8 +917,11 @@ define Device/netgear_orbi
 	$(call Device/DniImage)
 	SOC := qcom-ipq4019
 	DEVICE_VENDOR := NETGEAR
-	IMAGE/factory.img := append-kernel | pad-offset 128k 64 | \
-		append-uImage-fakehdr filesystem | pad-to $$$$(KERNEL_SIZE) | \
+	KERNEL = kernel-bin | fit none $$(KDIR)/image-$$(DEVICE_DTS).dtb | \
+		pad-offset 128k 64 | append-uImage-fakehdr filesystem | \
+		check-size $$(KERNEL_SIZE)
+	KERNEL_INITRAMFS = kernel-bin | fit none $$(KDIR)/image-$$(DEVICE_DTS).dtb
+	IMAGE/factory.img := append-kernel | pad-to $$$$(KERNEL_SIZE) | \
 		append-rootfs | pad-rootfs | netgear-dni
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to 64k | \
 		sysupgrade-tar rootfs=$$$$@ | append-metadata
