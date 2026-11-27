@@ -3,7 +3,5 @@ noauth
 nobsdcomp
 nodeflate
 idle 0
-require-mppe-128
-nomppe-40
-nomppe-stateful
+mppe required,no40,no56,stateless
 maxfail 0

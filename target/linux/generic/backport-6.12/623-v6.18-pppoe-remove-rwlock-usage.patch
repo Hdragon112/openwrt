@@ -84,10 +84,10 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  
  	return 0;
  }
-@@ -197,19 +198,23 @@ static int __set_item(struct pppoe_net *
- static void __delete_item(struct pppoe_net *pn, struct pppox_sock *po)
+@@ -198,20 +199,24 @@ static void __delete_item(struct pppoe_n
+ 					char *addr, int ifindex)
  {
- 	int hash = hash_item(po->pppoe_pa.sid, po->pppoe_pa.remote);
+ 	int hash = hash_item(sid, addr);
 -	struct pppox_sock *ret, **src;
 +	struct pppox_sock *ret, __rcu **src;
  
@@ -96,7 +96,8 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  	src = &pn->hash_table[hash];
  
  	while (ret) {
- 		if (ret == po) {
+ 		if (cmp_addr(&ret->pppoe_pa, sid, addr) &&
+ 		    ret->pppoe_ifindex == ifindex) {
 -			*src = ret->next;
 +			struct pppox_sock *next;
 +
@@ -112,7 +113,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  	}
  }
  
-@@ -223,11 +228,9 @@ static inline struct pppox_sock *get_ite
+@@ -225,11 +230,9 @@ static inline struct pppox_sock *get_ite
  {
  	struct pppox_sock *po;
  
@@ -126,19 +127,19 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  
  	return po;
  }
-@@ -255,9 +258,9 @@ static inline struct pppox_sock *get_ite
- 
- static void delete_item(struct pppoe_net *pn, struct pppox_sock *po)
+@@ -258,9 +261,9 @@ static inline struct pppox_sock *get_ite
+ static inline void delete_item(struct pppoe_net *pn, __be16 sid,
+ 					char *addr, int ifindex)
  {
 -	write_lock_bh(&pn->hash_lock);
 +	spin_lock(&pn->hash_lock);
- 	__delete_item(pn, po);
+ 	__delete_item(pn, sid, addr, ifindex);
 -	write_unlock_bh(&pn->hash_lock);
 +	spin_unlock(&pn->hash_lock);
  }
  
  /***************************************************************************
-@@ -273,14 +276,16 @@ static void pppoe_flush_dev(struct net_d
+@@ -276,14 +279,16 @@ static void pppoe_flush_dev(struct net_d
  	int i;
  
  	pn = pppoe_pernet(dev_net(dev));
@@ -158,7 +159,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  			}
  
  			if (!po)
-@@ -297,7 +302,7 @@ static void pppoe_flush_dev(struct net_d
+@@ -300,7 +305,7 @@ static void pppoe_flush_dev(struct net_d
  			 */
  
  			sock_hold(sk);
@@ -167,7 +168,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  			lock_sock(sk);
  
  			if (po->pppoe_dev == dev &&
-@@ -317,11 +322,12 @@ static void pppoe_flush_dev(struct net_d
+@@ -320,11 +325,12 @@ static void pppoe_flush_dev(struct net_d
  			 */
  
  			BUG_ON(pppoe_pernet(dev_net(dev)) == NULL);
@@ -183,7 +184,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  }
  
  static int pppoe_device_event(struct notifier_block *this,
-@@ -531,6 +537,11 @@ static struct proto pppoe_sk_proto __rea
+@@ -534,6 +540,11 @@ static struct proto pppoe_sk_proto __rea
  	.obj_size = sizeof(struct pppox_sock),
  };
  
@@ -195,7 +196,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  /***********************************************************************
   *
   * Initialize a new struct sock.
-@@ -545,11 +556,13 @@ static int pppoe_create(struct net *net,
+@@ -548,11 +559,13 @@ static int pppoe_create(struct net *net,
  		return -ENOMEM;
  
  	sock_init_data(sock, sk);
@@ -209,7 +210,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  	sk->sk_state		= PPPOX_NONE;
  	sk->sk_type		= SOCK_STREAM;
  	sk->sk_family		= PF_PPPOX;
-@@ -601,7 +614,6 @@ static int pppoe_release(struct socket *
+@@ -605,7 +618,6 @@ static int pppoe_release(struct socket *
  	sock_orphan(sk);
  	sock->sk = NULL;
  
@@ -217,7 +218,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  	release_sock(sk);
  	sock_put(sk);
  
-@@ -682,9 +694,9 @@ static int pppoe_connect(struct socket *
+@@ -687,9 +699,9 @@ static int pppoe_connect(struct socket *
  		       &sp->sa_addr.pppoe,
  		       sizeof(struct pppoe_addr));
  
@@ -229,7 +230,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  		if (error < 0)
  			goto err_put;
  
-@@ -1053,11 +1065,11 @@ static inline struct pppox_sock *pppoe_g
+@@ -1059,11 +1071,11 @@ static inline struct pppox_sock *pppoe_g
  	int i;
  
  	for (i = 0; i < PPPOE_HASH_SIZE; i++) {
@@ -243,7 +244,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  		}
  	}
  
-@@ -1066,19 +1078,19 @@ out:
+@@ -1072,19 +1084,19 @@ out:
  }
  
  static void *pppoe_seq_start(struct seq_file *seq, loff_t *pos)
@@ -266,7 +267,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  
  	++*pos;
  	if (v == SEQ_START_TOKEN) {
-@@ -1086,14 +1098,15 @@ static void *pppoe_seq_next(struct seq_f
+@@ -1092,14 +1104,15 @@ static void *pppoe_seq_next(struct seq_f
  		goto out;
  	}
  	po = v;
@@ -285,7 +286,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  			if (po)
  				break;
  		}
-@@ -1104,10 +1117,9 @@ out:
+@@ -1110,10 +1123,9 @@ out:
  }
  
  static void pppoe_seq_stop(struct seq_file *seq, void *v)
@@ -298,7 +299,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  }
  
  static const struct seq_operations pppoe_seq_ops = {
-@@ -1150,7 +1162,7 @@ static __net_init int pppoe_init_net(str
+@@ -1156,7 +1168,7 @@ static __net_init int pppoe_init_net(str
  	struct pppoe_net *pn = pppoe_pernet(net);
  	struct proc_dir_entry *pde;
  
